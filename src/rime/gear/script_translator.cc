@@ -147,6 +147,7 @@ class ScriptTranslation : public Translation {
   size_t correction_count_ = 0;
 
   bool enable_correction_;
+  bool enable_completion_;
 };
 
 // ScriptTranslator implementation
@@ -162,6 +163,7 @@ ScriptTranslator::ScriptTranslator(const Ticket& ticket)
     config->GetBool(name_space_ + "/always_show_comments",
                     &always_show_comments_);
     config->GetBool(name_space_ + "/enable_correction", &enable_correction_);
+    config->GetBool(name_space_ + "/enable_completion", &enable_completion_);
     config->GetInt(name_space_ + "/max_homophones", &max_homophones_);
     poet_.reset(new Poet(language(), config));
   }
@@ -361,7 +363,7 @@ bool ScriptTranslation::Evaluate(Dictionary* dict, UserDictionary* user_dict) {
   size_t consumed = syllabifier_->BuildSyllableGraph(*dict->prism());
   const auto& syllable_graph = syllabifier_->syllable_graph();
 
-  phrase_ = dict->Lookup(syllable_graph, 0);
+  phrase_ = dict->Lookup(syllable_graph, 0, 0.0, translator_->enable_completion());
   if (user_dict) {
     user_phrase_ = user_dict->Lookup(syllable_graph, 0);
   }

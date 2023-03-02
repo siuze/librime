@@ -51,11 +51,13 @@ bool compare_chunk_by_head_element(const Chunk& a, const Chunk& b) {
 }
 
 size_t match_extra_code(const table::Code* extra_code, size_t depth,
-                        const SyllableGraph& syll_graph, size_t current_pos) {
+                        const SyllableGraph& syll_graph, size_t current_pos, bool enable_completion_=false) {
   if (!extra_code || depth >= extra_code->size)
     return current_pos;  // success
-  if (current_pos >= syll_graph.interpreted_length)
-    return 0;  // failure (possibly success for completion in the future)
+  if (current_pos >= syll_graph.interpreted_length){
+    if (enable_completion_) return match_extra_code(extra_code, depth + 1,syll_graph, current_pos+1, enable_completion_); //长词联想
+    else return 0;
+  }
   auto index = syll_graph.indices.find(current_pos);
   if (index == syll_graph.indices.end())
     return 0;
@@ -66,7 +68,7 @@ size_t match_extra_code(const table::Code* extra_code, size_t depth,
   size_t best_match = 0;
   for (const SpellingProperties* props : spellings->second) {
     size_t match_end_pos = match_extra_code(extra_code, depth + 1,
-                                            syll_graph, props->end_pos);
+                                            syll_graph, props->end_pos, enable_completion_);
     if (!match_end_pos) continue;
     if (match_end_pos > best_match)
       best_match = match_end_pos;
@@ -191,7 +193,8 @@ static void lookup_table(Table* table,
                          DictEntryCollector* collector,
                          const SyllableGraph& syllable_graph,
                          size_t start_pos,
-                         double initial_credibility) {
+                         double initial_credibility,
+                         bool enable_completion_=false) {
   TableQueryResult result;
   if (!table->Query(syllable_graph, start_pos, &result)) {
     return;
@@ -204,8 +207,9 @@ static void lookup_table(Table* table,
       if (a.extra_code()) {
         do {
           size_t actual_end_pos = dictionary::match_extra_code(
-              a.extra_code(), 0, syllable_graph, end_pos);
+              a.extra_code(), 0, syllable_graph, end_pos, enable_completion_);
           if (actual_end_pos == 0) continue;
+          if (actual_end_pos > syllable_graph.interpreted_length) actual_end_pos = end_pos+2; //和无长词预测的候选项统一排序，不设置这个的话长词联想的词汇会因为长度更长，总是排在最前
           (*collector)[actual_end_pos].AddChunk(
               {table, a.code(), a.entry(), cr});
         }
@@ -221,7 +225,9 @@ static void lookup_table(Table* table,
 an<DictEntryCollector>
 Dictionary::Lookup(const SyllableGraph& syllable_graph,
                    size_t start_pos,
-                   double initial_credibility) {
+                   double initial_credibility,
+				   bool enable_completion_
+				   ) {
   if (!loaded())
     return nullptr;
   auto collector = New<DictEntryCollector>();
@@ -229,7 +235,7 @@ Dictionary::Lookup(const SyllableGraph& syllable_graph,
     if (!table->IsOpen())
       continue;
     lookup_table(table.get(), collector.get(),
-                 syllable_graph, start_pos, initial_credibility);
+                 syllable_graph, start_pos, initial_credibility,enable_completion_);
   }
   if (collector->empty())
     return nullptr;

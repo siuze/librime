@@ -73,7 +73,9 @@ class Dictionary : public Class<Dictionary, const Ticket&> {
 
   RIME_API an<DictEntryCollector> Lookup(const SyllableGraph& syllable_graph,
                                          size_t start_pos,
-                                         double initial_credibility = 0.0);
+                                         double initial_credibility = 0.0,
+                                         bool enable_completion_ = false
+                                        );
   // if predictive is true, do an expand search with limit,
   // otherwise do an exact match.
   // return num of matching keys.
