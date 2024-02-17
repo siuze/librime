@@ -346,7 +346,8 @@ bool ScriptTranslation::Evaluate(Dictionary* dict, UserDictionary* user_dict) {
   size_t consumed = syllabifier_->BuildSyllableGraph(*dict->prism());
   const auto& syllable_graph = syllabifier_->syllable_graph();
 
-  phrase_ = dict->Lookup(syllable_graph, 0, 0.0, translator_->enable_completion());
+  phrase_ =
+      dict->Lookup(syllable_graph, 0, 0.0, translator_->enable_completion());
   if (user_dict) {
     user_phrase_ = user_dict->Lookup(syllable_graph, 0);
   }
