@@ -5,7 +5,6 @@
 // 2011-11-23 GONG Chen <chen.sst@gmail.com>
 //
 #include <algorithm>
-#include <boost/lexical_cast.hpp>
 #include <rime/common.h>
 #include <rime/composition.h>
 #include <rime/context.h>
@@ -23,22 +22,22 @@ namespace rime {
 
 enum KeyBindingCondition {
   kNever,
-  kWhenPaging,     // user has changed page
-  kWhenHasMenu,    // at least one candidate
-  kWhenComposing,  // input string is not empty
+  kWhenPredicting,  // showing prediction candidates
+  kWhenPaging,      // user has changed page
+  kWhenHasMenu,     // at least one candidate
+  kWhenComposing,   // input string is not empty
   kAlways,
 };
 
 static struct KeyBindingConditionDef {
   KeyBindingCondition condition;
   const char* name;
-} condition_definitions[] = {
-  { kWhenPaging,    "paging"    },
-  { kWhenHasMenu,   "has_menu"  },
-  { kWhenComposing, "composing" },
-  { kAlways,        "always"    },
-  { kNever,         NULL        }
-};
+} condition_definitions[] = {{kWhenPredicting, "predicting"},
+                             {kWhenPaging, "paging"},
+                             {kWhenHasMenu, "has_menu"},
+                             {kWhenComposing, "composing"},
+                             {kAlways, "always"},
+                             {kNever, NULL}};
 
 static KeyBindingCondition translate_condition(const string& str) {
   for (auto* d = condition_definitions; d->name; ++d) {
@@ -51,15 +50,12 @@ static KeyBindingCondition translate_condition(const string& str) {
 struct KeyBinding {
   KeyBindingCondition whence;
   KeySequence target;
-  function<void (Engine* engine)> action;
+  function<void(Engine* engine)> action;
 
-  bool operator< (const KeyBinding& o) const {
-    return whence < o.whence;
-  }
+  bool operator<(const KeyBinding& o) const { return whence < o.whence; }
 };
 
-class KeyBindings : public map<KeyEvent,
-                             vector<KeyBinding>> {
+class KeyBindings : public map<KeyEvent, vector<KeyBinding>> {
  public:
   void LoadBindings(const an<ConfigList>& bindings);
   void Bind(const KeyEvent& key, const KeyBinding& binding);
@@ -68,8 +64,7 @@ class KeyBindings : public map<KeyEvent,
 static void radio_select_option(Context* ctx,
                                 const Switches::SwitchOption& the_option) {
   Switches::FindRadioGroupOption(
-      the_option.the_switch,
-      [ctx, &the_option](Switches::SwitchOption option) {
+      the_option.the_switch, [ctx, &the_option](Switches::SwitchOption option) {
         bool value = (option.option_index == the_option.option_index);
         if (ctx->get_option(option.option_name) != value) {
           ctx->set_option(option.option_name, value);
@@ -85,9 +80,10 @@ inline static bool is_switch_index(const string& option) {
 static Switches::SwitchOption switch_by_index(Switches& switches,
                                               const string& option) {
   try {
-    size_t index = boost::lexical_cast<size_t>(option.substr(1));
+    size_t index = std::stoul(option.substr(1));
     return switches.ByIndex(index);
-  } catch (...) {}
+  } catch (...) {
+  }
   return {};
 }
 
@@ -96,16 +92,13 @@ static void toggle_option(Engine* engine, const string& option) {
     return;
   Context* ctx = engine->context();
   Switches switches(engine->schema()->config());
-  auto the_option = is_switch_index(option)
-                    ? switch_by_index(switches, option)
-                    : switches.OptionByName(option);
+  auto the_option = is_switch_index(option) ? switch_by_index(switches, option)
+                                            : switches.OptionByName(option);
   if (the_option.found() && the_option.type == Switches::kRadioGroup) {
     auto selected_option = switches.FindRadioGroupOption(
-        the_option.the_switch,
-        [ctx](Switches::SwitchOption option) {
-          return ctx->get_option(option.option_name)
-              ? Switches::kFound
-              : Switches::kContinue;
+        the_option.the_switch, [ctx](Switches::SwitchOption option) {
+          return ctx->get_option(option.option_name) ? Switches::kFound
+                                                     : Switches::kContinue;
         });
     if (!selected_option.found()) {
       // invalid state: none is selected. select the given option.
@@ -162,8 +155,7 @@ static void select_schema(Engine* engine, const string& schema) {
   if (schema == ".next") {
     Switcher switcher(engine);
     switcher.SelectNextSchema();
-  }
-  else {
+  } else {
     engine->ApplySchema(new Schema(schema));
   }
 }
@@ -199,26 +191,20 @@ void KeyBindings::LoadBindings(const an<ConfigList>& bindings) {
         LOG(WARNING) << "invalid key binding #" << i << ".";
         continue;
       }
-    }
-    else if (auto target = map->GetValue("send_sequence")) {
+    } else if (auto target = map->GetValue("send_sequence")) {
       if (!binding.target.Parse(target->str())) {
         LOG(WARNING) << "invalid key sequence #" << i << ".";
         continue;
       }
-    }
-    else if (auto option = map->GetValue("toggle")) {
+    } else if (auto option = map->GetValue("toggle")) {
       binding.action = std::bind(&toggle_option, _1, option->str());
-    }
-    else if (auto option = map->GetValue("set_option")) {
+    } else if (auto option = map->GetValue("set_option")) {
       binding.action = std::bind(&set_option, _1, option->str());
-    }
-    else if (auto option = map->GetValue("unset_option")) {
+    } else if (auto option = map->GetValue("unset_option")) {
       binding.action = std::bind(&unset_option, _1, option->str());
-    }
-    else if (auto schema = map->GetValue("select")) {
+    } else if (auto schema = map->GetValue("select")) {
       binding.action = std::bind(&select_schema, _1, schema->str());
-    }
-    else {
+    } else {
       LOG(WARNING) << "invalid key binding #" << i << ".";
       continue;
     }
@@ -233,10 +219,11 @@ void KeyBindings::Bind(const KeyEvent& key, const KeyBinding& binding) {
   vec.insert(lb, binding);
 }
 
-KeyBinder::KeyBinder(const Ticket& ticket) : Processor(ticket),
-                                             key_bindings_(new KeyBindings),
-                                             redirecting_(false),
-                                             last_key_(0) {
+KeyBinder::KeyBinder(const Ticket& ticket)
+    : Processor(ticket),
+      key_bindings_(new KeyBindings),
+      redirecting_(false),
+      last_key_(0) {
   LoadConfig();
 }
 
@@ -257,8 +244,14 @@ KeyBindingConditions::KeyBindingConditions(Context* ctx) {
   }
 
   Composition& comp = ctx->composition();
-  if (!comp.empty() && comp.back().HasTag("paging")) {
-    insert(kWhenPaging);
+  if (!comp.empty()) {
+    const Segment& last_seg = comp.back();
+    if (last_seg.HasTag("paging")) {
+      insert(kWhenPaging);
+    }
+    if (last_seg.HasTag("prediction")) {
+      insert(kWhenPredicting);
+    }
   }
 }
 
@@ -283,8 +276,7 @@ ProcessResult KeyBinder::ProcessKeyEvent(const KeyEvent& key_event) {
 void KeyBinder::PerformKeyBinding(const KeyBinding& binding) {
   if (binding.action) {
     binding.action(engine_);
-  }
-  else {
+  } else {
     redirecting_ = true;
     for (const KeyEvent& key_event : binding.target) {
       engine_->ProcessKey(key_event);
@@ -316,8 +308,8 @@ bool KeyBinder::ReinterpretPagingKey(const KeyEvent& key_event) {
     Context* ctx = engine_->context();
     const string& input(ctx->input());
     if (!input.empty() && input[input.length() - 1] != '.') {
-      LOG(INFO) << "reinterpreted key: '" << last_key_
-                << "', successor: '" << (char)ch << "'";
+      LOG(INFO) << "reinterpreted key: '" << last_key_ << "', successor: '"
+                << (char)ch << "'";
       ctx->PushInput(last_key_);
       ret = true;
     }

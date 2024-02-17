@@ -9,16 +9,31 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: macos-14
+    steps:
+      - name: Checkout last commit
+        uses: actions/checkout@v4
+      - name: Install clang-format
+        run: brew install clang-format
+      - name: Lint
+        run: make clang-format-lint
+
   linux:
+    needs: lint
     uses: ./.github/workflows/linux-build.yml
 
   macos:
+    needs: lint
     uses: ./.github/workflows/macos-build.yml
     with:
       build_variant: '-universal'
       rime_plugins: rime/librime-charcode hchunhui/librime-lua lotem/librime-octagram
 
   windows:
+    needs: lint
     uses: ./.github/workflows/windows-build.yml
-    with:
-      rime_plugins: rime/librime-charcode hchunhui/librime-lua lotem/librime-octagram
+
+  docker:
+    needs: lint
+    uses: ./.github/workflows/docker-build.yml

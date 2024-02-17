@@ -3,7 +3,10 @@
 rime_root = $(CURDIR)
 src_dir = $(rime_root)/deps
 
-glog: build ?= cmake-build
+ifndef NOPARALLEL
+export MAKEFLAGS+=" -j$(( $(nproc) + 1)) "
+endif
+
 build ?= build
 
 rime_deps = glog gtest leveldb marisa opencc yaml-cpp
@@ -14,7 +17,7 @@ all: $(rime_deps)
 
 # note: this won't clean output files under include/, lib/ and bin/.
 clean-src:
-	rm -r $(src_dir)/glog/cmake-build || true
+	rm -r $(src_dir)/glog/build || true
 	rm -r $(src_dir)/googletest/build || true
 	rm -r $(src_dir)/leveldb/build || true
 	rm -r $(src_dir)/marisa-trie/build || true
@@ -50,7 +53,7 @@ leveldb:
 
 marisa:
 	cd $(src_dir)/marisa-trie; \
-	cmake $(src_dir) -B$(build) \
+	cmake . -B$(build) \
 	-DCMAKE_BUILD_TYPE:STRING="Release" \
 	-DCMAKE_INSTALL_PREFIX:PATH="$(rime_root)" \
 	&& cmake --build $(build) --target install

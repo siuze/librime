@@ -16,15 +16,14 @@ namespace rime {
 class Candidate;
 class KeyEvent;
 
-class Context {
+class RIME_API Context {
  public:
-  using Notifier = signal<void (Context* ctx)>;
-  using OptionUpdateNotifier =
-      signal<void (Context* ctx, const string& option)>;
+  using Notifier = signal<void(Context* ctx)>;
+  using OptionUpdateNotifier = signal<void(Context* ctx, const string& option)>;
   using PropertyUpdateNotifier =
-      signal<void (Context* ctx, const string& property)>;
+      signal<void(Context* ctx, const string& property)>;
   using KeyEventNotifier =
-      signal<void (Context* ctx, const KeyEvent& key_event)>;
+      signal<void(Context* ctx, const KeyEvent& key_event)>;
 
   Context() = default;
   ~Context() = default;
@@ -45,6 +44,8 @@ class Context {
 
   // return false if there is no candidate at index
   bool Select(size_t index);
+  // return false if the selected index has not changed
+  bool Highlight(size_t index);
   bool DeleteCandidate(size_t index);
   // return false if there's no candidate for current segment
   bool ConfirmCurrentSelection();
@@ -87,9 +88,7 @@ class Context {
   PropertyUpdateNotifier& property_update_notifier() {
     return property_update_notifier_;
   }
-  KeyEventNotifier& unhandled_key_notifier() {
-    return unhandled_key_notifier_;
-  }
+  KeyEventNotifier& unhandled_key_notifier() { return unhandled_key_notifier_; }
 
  private:
   string GetSoftCursor() const;

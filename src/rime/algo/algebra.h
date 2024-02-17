@@ -23,7 +23,7 @@ class Script : public map<string, vector<Spelling>> {
   void Merge(const string& s,
              const SpellingProperties& sp,
              const vector<Spelling>& v);
-  void Dump(const string& file_name) const;
+  void Dump(const path& file_path) const;
 };
 
 class Projection {
@@ -33,6 +33,7 @@ class Projection {
   RIME_API bool Apply(string* value);
   // {z, y, x} -> {a, b, c, d}
   RIME_API bool Apply(Script* value);
+
  protected:
   vector<of<Calculation>> calculation_;
 };

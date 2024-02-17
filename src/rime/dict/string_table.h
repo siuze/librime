@@ -10,6 +10,7 @@
 
 #include <utility>
 #include <marisa.h>
+#include <rime_api.h>
 #include <rime/common.h>
 
 namespace rime {
@@ -18,7 +19,7 @@ using StringId = marisa::UInt32;
 
 const StringId kInvalidStringId = (StringId)(-1);
 
-class StringTable {
+class RIME_API StringTable {
  public:
   StringTable() = default;
   virtual ~StringTable() = default;
@@ -26,10 +27,8 @@ class StringTable {
 
   bool HasKey(const string& key);
   StringId Lookup(const string& key);
-  void CommonPrefixMatch(const string& query,
-                         vector<StringId>* result);
-  void Predict(const string& query,
-               vector<StringId>* result);
+  void CommonPrefixMatch(const string& query, vector<StringId>* result);
+  void Predict(const string& query, vector<StringId>* result);
   string GetString(StringId string_id);
 
   size_t NumKeys() const;
@@ -39,9 +38,10 @@ class StringTable {
   marisa::Trie trie_;
 };
 
-class StringTableBuilder: public StringTable {
+class RIME_API StringTableBuilder : public StringTable {
  public:
-  void Add(const string& key, double weight = 1.0,
+  void Add(const string& key,
+           double weight = 1.0,
            StringId* reference = nullptr);
   void Clear();
   void Build();

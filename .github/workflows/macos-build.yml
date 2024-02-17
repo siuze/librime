@@ -14,20 +14,27 @@ on:
         type: string
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-14]
     env:
-      boost_version: 1.78.0
-      BOOST_ROOT: ${{ github.workspace }}/deps/boost_1_78_0
+      boost_version: 1.84.0
+      BOOST_ROOT: ${{ github.workspace }}/deps/boost-1.84.0
       RIME_PLUGINS: ${{ inputs.rime_plugins }}
     steps:
       - name: Checkout last commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repository }}
           submodules: recursive
 
       - name: Configure build environment
         run: |
+          brew install llvm ninja
+          echo "CMAKE_GENERATOR=Ninja"  >> $GITHUB_ENV
+          echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
           echo git_ref_name="$(git describe --always)" >> $GITHUB_ENV
 
       - name: Configure build variant
@@ -37,18 +44,20 @@ jobs:
 
       - name: Cache Boost
         id: cache-boost
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
-            ${{ env.BOOST_ROOT }}.tar.bz2
-            ${{ env.BOOST_ROOT }}/stage
-          key: ${{ runner.os }}-boost-${{ env.boost_version }}
+            ${{ env.BOOST_ROOT }}.tar.xz
+          key: ${{ matrix.os }}-boost-${{ env.boost_version }}
 
       - name: Extract Boost source tarball
         if: steps.cache-boost.outputs.cache-hit == 'true'
         run: |
           pushd deps
-          tar --bzip2 -xf ${{ env.BOOST_ROOT }}.tar.bz2
+          tar -xJf ${{ env.BOOST_ROOT }}.tar.xz
+          cd ${{ env.BOOST_ROOT }}
+          ./bootstrap.sh
+          ./b2 headers
           popd
 
       - name: Install Boost
@@ -60,28 +69,28 @@ jobs:
 
       - name: Cache dependencies
         id: cache-deps
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             bin
             include
             lib
             share
-          key: ${{ runner.os }}${{ inputs.build_variant }}-deps-${{ hashFiles('submodule-status') }}
+          key: ${{ matrix.os }}${{ inputs.build_variant }}-deps-${{ hashFiles('submodule-status') }}
 
       - name: Build dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: make xcode/deps
+        run: make deps
 
       - name: Install Rime plugins
         run: ./action-install-plugins-macos.sh
 
       - name: Build and test
-        run: make xcode/test
+        run: make test
 
       - name: Create distributable
         run: |
-          make xcode/dist
+          make install
           tar -cjvf rime-${{ env.git_ref_name }}-${{ runner.os }}.tar.bz2 \
           dist version-info.txt
           tar -cjvf rime-deps-${{ env.git_ref_name }}-${{ runner.os }}.tar.bz2 \

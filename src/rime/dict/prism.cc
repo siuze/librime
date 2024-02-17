@@ -43,7 +43,7 @@ bool SpellingAccessor::Next() {
   if (exhausted())
     return false;
   if (!iter_ || ++iter_ >= end_)
-      spelling_id_ = -1;
+    spelling_id_ = -1;
   return exhausted();
 }
 
@@ -69,18 +69,17 @@ SpellingProperties SpellingAccessor::properties() const {
   return props;
 }
 
-Prism::Prism(const string& file_name)
-  : MappedFile(file_name), trie_(new Darts::DoubleArray) {
-}
+Prism::Prism(const path& file_path)
+    : MappedFile(file_path), trie_(new Darts::DoubleArray) {}
 
 bool Prism::Load() {
-  LOG(INFO) << "loading prism file: " << file_name();
+  LOG(INFO) << "loading prism file: " << file_path();
 
   if (IsOpen())
     Close();
 
   if (!OpenReadOnly()) {
-    LOG(ERROR) << "error opening prism file '" << file_name() << "'.";
+    LOG(ERROR) << "error opening prism file '" << file_path() << "'.";
     return false;
   }
 
@@ -115,7 +114,7 @@ bool Prism::Load() {
 }
 
 bool Prism::Save() {
-  LOG(INFO) << "saving prism file: " << file_name();
+  LOG(INFO) << "saving prism file: " << file_path();
   if (!trie_->total_size()) {
     LOG(ERROR) << "the trie has not been constructed!";
     return false;
@@ -137,8 +136,7 @@ bool Prism::Build(const Syllabary& syllabary,
       keys[key_id] = it->first.c_str();
       map_size += it->second.size();
     }
-  }
-  else {
+  } else {
     for (auto it = syllabary.begin(); it != syllabary.end(); ++it, ++key_id) {
       keys[key_id] = it->c_str();
     }
@@ -151,17 +149,18 @@ bool Prism::Build(const Syllabary& syllabary,
   size_t array_size = trie_->size();
   size_t image_size = trie_->total_size();
   const size_t kDescriptorExtraSize = 12;
-  size_t estimated_map_size = num_spellings * 12 +
+  size_t estimated_map_size =
+      num_spellings * 12 +
       map_size * (4 + sizeof(prism::SpellingDescriptor) + kDescriptorExtraSize);
   const size_t kReservedSize = 1024;
   if (!Create(image_size + estimated_map_size + kReservedSize)) {
-    LOG(ERROR) << "Error creating prism file '" << file_name() << "'.";
+    LOG(ERROR) << "Error creating prism file '" << file_path() << "'.";
     return false;
   }
   // creating metadata
   auto metadata = Allocate<prism::Metadata>();
   if (!metadata) {
-    LOG(ERROR) << "Error creating metadata in file '" << file_name() << "'.";
+    LOG(ERROR) << "Error creating metadata in file '" << file_path() << "'.";
     return false;
   }
   metadata->dict_file_checksum = dict_file_checksum;
@@ -250,14 +249,13 @@ bool Prism::GetValue(const string& key, int* value) const {
 
 // Given a key, search all the keys in the tree that share
 // a common prefix with that key.
-void Prism::CommonPrefixSearch(const string& key,
-                               vector<Match>* result) {
+void Prism::CommonPrefixSearch(const string& key, vector<Match>* result) {
   if (!result || key.empty())
     return;
   size_t len = key.length();
   result->resize(len);
-  size_t num_results = trie_->commonPrefixSearch(key.c_str(),
-                                                 &result->front(), len, len);
+  size_t num_results =
+      trie_->commonPrefixSearch(key.c_str(), &result->front(), len, len);
   result->resize(num_results);
 }
 
@@ -271,7 +269,7 @@ void Prism::ExpandSearch(const string& key,
   size_t node_pos = 0;
   size_t key_pos = 0;
   int ret = trie_->traverse(key.c_str(), node_pos, key_pos);
-  //key is not a valid path
+  // key is not a valid path
   if (ret == -2)
     return;
   if (ret != -1) {
@@ -281,23 +279,21 @@ void Prism::ExpandSearch(const string& key,
   }
   std::queue<node_t> q;
   q.push({key, node_pos});
-  while(!q.empty()) {
+  while (!q.empty()) {
     node_t node = q.front();
     q.pop();
-    const char* c = (format_ > 1.0 - DBL_EPSILON) ? metadata_->alphabet
-                                                  : kDefaultAlphabet;
+    const char* c =
+        (format_ > 1.0 - DBL_EPSILON) ? metadata_->alphabet : kDefaultAlphabet;
     for (; *c; ++c) {
       string k = node.key + *c;
       size_t k_pos = node.key.length();
       size_t n_pos = node.node_pos;
       ret = trie_->traverse(k.c_str(), n_pos, k_pos);
       if (ret <= -2) {
-        //ignore
-      }
-      else if (ret == -1) {
+        // ignore
+      } else if (ret == -1) {
         q.push({k, n_pos});
-      }
-      else {
+      } else {
         q.push({k, n_pos});
         result->push_back(Match{ret, k_pos});
         if (limit && ++count >= limit)
