@@ -59,13 +59,14 @@ jobs:
           ./bootstrap.sh
           ./b2 headers
           popd
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
       - name: Install Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: ./install-boost.sh
 
       - name: Check submodules
+        if: always()
         run: git submodule > submodule-status
 
       - name: Cache dependencies
