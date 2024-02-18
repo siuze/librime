@@ -127,6 +127,10 @@ bool UserDictEntryIterator::Next() {
 
 UserDictionary::UserDictionary(const string& name, an<Db> db)
     : name_(name), db_(db) {}
+UserDictionary::UserDictionary(const string& name,
+                               an<Db> db,
+                               bool enable_completion)
+    : name_(name), db_(db), enable_completion_(enable_completion) {}
 
 UserDictionary::~UserDictionary() {
   if (loaded()) {
@@ -224,7 +228,14 @@ void UserDictionary::DfsLookup(const SyllableGraph& syll_graph,
         if (!state->ForwardScan(prefix))  // reached the end of db
           continue;
       }
-      while (state->IsExactMatch(prefix)) {  // 'b |e ' vs. 'b e \tBe'
+      while (
+          state->IsExactMatch(prefix) ||
+          (enable_completion_ && state->IsPrefixMatch(prefix) &&
+           state->code.size() > 2 &&
+           syll_graph.indices.size() ==
+               current_pos +
+                   2)) {  // 'b |e ' vs. 'b e \tBe'
+                          // 当enable_completion_开启，且打出3个及以上音节且当前已经检查到最后一个编码时才允许加入长词联想预测候选项
         DLOG(INFO) << "match found for '" << prefix << "'.";
         state->RecruitEntry(end_pos);
         if (!state->NextEntry())  // reached the end of db
@@ -499,7 +510,21 @@ UserDictionary* UserDictionaryComponent::Create(const string& dict_name,
   }
   return new UserDictionary(dict_name, db);
 }
-
+UserDictionary* UserDictionaryComponent::Create(const string& dict_name,
+                                                const string& db_class,
+                                                bool enable_completion_) {
+  auto db = db_pool_[dict_name].lock();
+  if (!db) {
+    auto component = Db::Require(db_class);
+    if (!component) {
+      LOG(ERROR) << "undefined db class '" << db_class << "'.";
+      return NULL;
+    }
+    db.reset(component->Create(dict_name));
+    db_pool_[dict_name] = db;
+  }
+  return new UserDictionary(dict_name, db, enable_completion_);
+}
 UserDictionary* UserDictionaryComponent::Create(const Ticket& ticket) {
   if (!ticket.schema)
     return NULL;
@@ -508,6 +533,9 @@ UserDictionary* UserDictionaryComponent::Create(const Ticket& ticket) {
   config->GetBool(ticket.name_space + "/enable_user_dict", &enable_user_dict);
   if (!enable_user_dict)
     return NULL;
+  bool enable_completion_ = false;
+  config->GetBool(ticket.name_space + "/enable_completion",
+                  &enable_completion_);
   string dict_name;
   if (config->GetString(ticket.name_space + "/user_dict", &dict_name)) {
     // user specified name
@@ -524,7 +552,7 @@ UserDictionary* UserDictionaryComponent::Create(const Ticket& ticket) {
     // user specified db class
   }
   // obtain userdb object
-  return Create(dict_name, db_class);
+  return Create(dict_name, db_class, enable_completion_);
 }
 
 }  // namespace rime

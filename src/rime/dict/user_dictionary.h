@@ -49,6 +49,7 @@ struct Ticket;
 class UserDictionary : public Class<UserDictionary, const Ticket&> {
  public:
   UserDictionary(const string& name, an<Db> db);
+  UserDictionary(const string& name, an<Db> db, bool enable_completion);
   virtual ~UserDictionary();
 
   void Attach(const an<Table>& table, const an<Prism>& prism);
@@ -100,6 +101,7 @@ class UserDictionary : public Class<UserDictionary, const Ticket&> {
   an<Prism> prism_;
   TickCount tick_ = 0;
   time_t transaction_time_ = 0;
+  bool enable_completion_ = false;
 };
 
 class UserDictionaryComponent : public UserDictionary::Component {
@@ -107,6 +109,9 @@ class UserDictionaryComponent : public UserDictionary::Component {
   UserDictionaryComponent();
   UserDictionary* Create(const Ticket& ticket);
   UserDictionary* Create(const string& dict_name, const string& db_class);
+  UserDictionary* Create(const string& dict_name,
+                         const string& db_class,
+                         bool enable_completion_);
 
  private:
   map<string, weak<Db>> db_pool_;
