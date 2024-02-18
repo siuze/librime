@@ -475,6 +475,9 @@ void ScriptTranslation::PrepareCandidate() {
     const auto& entry = iter.Peek();
     DLOG(INFO) << "phrase '" << entry->text
                << "', code length: " << phrase_code_length;
+    if (entry->remaining_code_length > 0)
+      phrase_code_length = phrase_code_length + entry->remaining_code_length;
+    // 根据remaining_code_length恢复长词联想结果的真实音节数，之前的音节数是为了排序正常而缩短固定了的。
     cand = New<Phrase>(translator_->language(), "phrase", start_,
                        start_ + phrase_code_length, entry);
     cand->set_quality(std::exp(entry->weight) + translator_->initial_quality() +

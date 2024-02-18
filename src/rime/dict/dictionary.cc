@@ -30,6 +30,19 @@ struct Chunk {
   Chunk() = default;
   Chunk(Table* t, const Code& c, const table::Entry* e, double cr = 0.0)
       : table(t), code(c), entries(e), size(1), cursor(0), credibility(cr) {}
+  Chunk(Table* t,
+        const Code& c,
+        const table::Entry* e,
+        const string& r,
+        double cr = 0.0)
+      : table(t),
+        code(c),
+        entries(e),
+        size(1),
+        cursor(0),
+        remaining_code(r),
+        credibility(cr) {}
+  // 上面单独增加一个携带remaining_code信息的重载，因为下面那个用的是index_code()而非code()，会导致记录的编码有问题
   Chunk(Table* t, const TableAccessor& a, double cr = 0.0)
       : Chunk(t, a, string(), cr) {}
   Chunk(Table* t, const TableAccessor& a, const string& r, double cr = 0.0)
@@ -130,8 +143,13 @@ an<DictEntry> DictEntryIterator::Peek() {
     const double kS = 18.420680743952367;  // log(1e8)
     entry_->weight = e.weight - kS + chunk.credibility;
     if (!chunk.remaining_code.empty()) {
-      entry_->comment = "~" + chunk.remaining_code;
-      entry_->remaining_code_length = chunk.remaining_code.length();
+      if (chunk.remaining_code.at(0) ==
+          '\v')  // 如果remaining_code包含/v说明是来自长词联想的词语，不专门添加comment，因为还没研究清楚编码的获取方法
+        entry_->remaining_code_length = chunk.remaining_code.length();
+      else {
+        entry_->comment = "~" + chunk.remaining_code;
+        entry_->remaining_code_length = chunk.remaining_code.length();
+      }
     }
   }
   return entry_;
@@ -222,12 +240,18 @@ static void lookup_table(Table* table,
               a.extra_code(), 0, syllable_graph, end_pos, enable_completion_);
           if (actual_end_pos == 0)
             continue;
-          if (actual_end_pos > syllable_graph.interpreted_length)
-            actual_end_pos =
-                end_pos +
-                2;  // 和无长词预测的候选项统一排序，不设置这个的话长词联想的词汇会因为长度更长，总是排在最前
-          (*collector)[actual_end_pos].AddChunk(
-              {table, a.code(), a.entry(), cr});
+          if (actual_end_pos > syllable_graph.interpreted_length) {
+            // 如果这个词的是音节数量actual_end_pos大于当前音节总步长interpreted_length，说明是来自长词联想的结果
+            string remaining_code = string(
+                actual_end_pos - syllable_graph.interpreted_length, '\v');
+            // 给这个词加上remaining_code信息，说明还有未打完的编码，这里的编码本来应该要写真实剩余的编码，但是我暂时没研究清楚怎么获取，只知道剩余多少位编码，所以用N个不常用的字符\v来临时代替
+            (*collector)[syllable_graph.interpreted_length].AddChunk(
+                {table, a.code(), a.entry(), remaining_code, cr});
+          }  // 将此处的长词联想预测结果放到和无长词预测的长度为syllable_graph.interpreted_length的候选项一堆里面，一起排序，不这么做的话否则会因为联想词长度最长二总是排在最前面；实际消耗掉的音节数会在后面通过remaining_code补上
+          else {
+            (*collector)[actual_end_pos].AddChunk(
+                {table, a.code(), a.entry(), cr});
+          }
         } while (a.Next());
       } else {
         (*collector)[end_pos].AddChunk({table, a, cr});
