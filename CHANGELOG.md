@@ -1,3 +1,13 @@
+
+<a name="1.10.0-alpha240218"></a>
+
+# [1.10.0-alpha240218](https://github.com/siuze/librime/compare/1.9.0...1.10.0-alpha240218) (2024-02-18)
+### Bug Fixes
+* **长词联想:** 修复长词联想功能中上屏词汇消耗音节数量与实际不匹配的问题
+ ([4cca73d](https://github.com/siuze/librime/commit/4cca73d0cdb6a362619bf70645c4abfd80df7416)) [siuze/ShanRenMaLTS#38](https://github.com/siuze/ShanRenMaLTS/issues/38)
+### Others
+* 同步更新上游代码
+
 <a name="1.10.0"></a>
 # [1.10.0](https://github.com/rime/librime/compare/1.9.0...1.10.0) (2024-02-09)
 
