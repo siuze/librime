@@ -1,4 +1,19 @@
 
+<a name="1.10.0-alpha240219"></a>
+
+# [1.10.0-alpha240219](https://github.com/siuze/librime/compare/1.9.0...1.10.0-alpha240219) (2024-02-19)
+
+### Features
+* **用户词典长词联想:** 实现用户词典内自造词的长词联想，即最少只需要输入三个音节即可打出长自造词
+ ([49fe060](https://github.com/siuze/librime/commit/49fe060538fb7e8bc5ac37e8c9ac03e31cb9d1e4)) [siuze/ShanRenMaLTS#14](https://github.com/siuze/ShanRenMaLTS/discussions/14)  
+* **支持词组反查:** 实现script类型的音节码词典内的词组编码反查，之前只支持单字反查。
+ ([04f13a2](https://github.com/siuze/librime/commit/04f13a24e0fb7f828f776ab7063e7ff481e7ab4e))  ([ccce90d](https://github.com/siuze/librime/commit/ccce90d7f23febf455baae5f31e9cc2a0caa61bb)) [siuze/ShanRenMaLTS#13](https://github.com/siuze/ShanRenMaLTS/discussions/13)  
+### Bug
+* 用户词典长词联想时因为对应输入编码较短，会造成上屏后又会在用户词典内记录一个新的短编码，导致同一个词被视作多个条目进行词频记录（并不是非常恶性的bug）。暂时没研究清楚如何还原原始编码。  
+* 编译反查字典时放弃了部分内存释放的代码，可能会加大编译过程的内存占用，目前暂时没感受到显著影响
+
+
+
 <a name="1.10.0-alpha240218"></a>
 
 # [1.10.0-alpha240218](https://github.com/siuze/librime/compare/1.9.0...1.10.0-alpha240218) (2024-02-18)
