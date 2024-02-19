@@ -105,9 +105,6 @@ bool ReverseDb::Build(DictSettings* settings,
   //     }
   //   }
   for (const auto& e : collector.entries) {
-    std::cout << "添加词汇collector.entries: " << e->text
-              << "   及编码  e->raw_code: " << e->raw_code.ToString()
-              << std::endl;
     rev_table[e->text].insert(e->raw_code.ToString());
   }
   StringTableBuilder key_trie_builder;

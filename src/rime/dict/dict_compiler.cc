@@ -245,17 +245,16 @@ bool DictCompiler::BuildTable(int table_index,
         code.push_back(syllable_to_id[s]);
       }
       // release memory in time to reduce memory usage
-      //   RawCode().swap(r->raw_code);
-      //   auto ls = vocabulary.LocateEntries(code);
-      //   if (!ls) {
-      //     LOG(ERROR) << "Error locating entries in vocabulary.";
-      //     continue;
-      //   }
-      //   auto e = New<ShortDictEntry>();
-      //   e->code.swap(code);
-      //   e->text.swap(r->text);
-      //   e->weight = log(r->weight > 0 ? r->weight : DBL_EPSILON);
-      //   ls->push_back(e);
+      auto ls = vocabulary.LocateEntries(code);
+      if (!ls) {
+        LOG(ERROR) << "Error locating entries in vocabulary.";
+        continue;
+      }
+      auto e = New<ShortDictEntry>();
+      e->code = code;
+      e->text = r->text;
+      e->weight = log(r->weight > 0 ? r->weight : DBL_EPSILON);
+      ls->push_back(e);
     }
     // release memory in time to reduce memory usage
     // vector<of<RawDictEntry>>().swap(collector.entries);
