@@ -245,20 +245,20 @@ bool DictCompiler::BuildTable(int table_index,
         code.push_back(syllable_to_id[s]);
       }
       // release memory in time to reduce memory usage
-      RawCode().swap(r->raw_code);
-      auto ls = vocabulary.LocateEntries(code);
-      if (!ls) {
-        LOG(ERROR) << "Error locating entries in vocabulary.";
-        continue;
-      }
-      auto e = New<ShortDictEntry>();
-      e->code.swap(code);
-      e->text.swap(r->text);
-      e->weight = log(r->weight > 0 ? r->weight : DBL_EPSILON);
-      ls->push_back(e);
+      //   RawCode().swap(r->raw_code);
+      //   auto ls = vocabulary.LocateEntries(code);
+      //   if (!ls) {
+      //     LOG(ERROR) << "Error locating entries in vocabulary.";
+      //     continue;
+      //   }
+      //   auto e = New<ShortDictEntry>();
+      //   e->code.swap(code);
+      //   e->text.swap(r->text);
+      //   e->weight = log(r->weight > 0 ? r->weight : DBL_EPSILON);
+      //   ls->push_back(e);
     }
     // release memory in time to reduce memory usage
-    vector<of<RawDictEntry>>().swap(collector.entries);
+    // vector<of<RawDictEntry>>().swap(collector.entries);
     if (settings->sort_order() != "original") {
       vocabulary.SortHomophones();
     }
@@ -285,7 +285,7 @@ bool DictCompiler::BuildReverseDb(DictSettings* settings,
   auto target_path = target_resolver_->ResolvePath(dict_name_ + ".reverse.bin");
   ReverseDb reverse_db(target_path);
   if (!reverse_db.Build(settings, collector.syllabary, vocabulary,
-                        collector.stems, dict_file_checksum) ||
+                        collector.stems, dict_file_checksum, collector) ||
       !reverse_db.Save()) {
     LOG(ERROR) << "error building reversedb.";
     return false;

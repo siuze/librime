@@ -15,6 +15,7 @@
 #include <rime/dict/mapped_file.h>
 #include <rime/dict/string_table.h>
 #include <rime/dict/vocabulary.h>
+#include <rime/dict/entry_collector.h>
 
 namespace rime {
 
@@ -48,7 +49,8 @@ class ReverseDb : public MappedFile {
              const Syllabary& syllabary,
              const Vocabulary& vocabulary,
              const ReverseLookupTable& stems,
-             uint32_t dict_file_checksum);
+             uint32_t dict_file_checksum,
+             const EntryCollector& collector);
   bool Save();
 
   uint32_t dict_file_checksum() const;

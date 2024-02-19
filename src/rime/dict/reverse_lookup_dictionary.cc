@@ -85,18 +85,30 @@ bool ReverseDb::Build(DictSettings* settings,
                       const Syllabary& syllabary,
                       const Vocabulary& vocabulary,
                       const ReverseLookupTable& stems,
-                      uint32_t dict_file_checksum) {
+                      uint32_t dict_file_checksum,
+                      const EntryCollector& collector) {
   LOG(INFO) << "building reversedb...";
   ReverseLookupTable rev_table;
   int syllable_id = 0;
-  for (const string& syllable : syllabary) {
-    auto it = vocabulary.find(syllable_id++);
-    if (it == vocabulary.end())
-      continue;
-    const auto& entries(it->second.entries);
-    for (const auto& e : entries) {
-      rev_table[e->text].insert(syllable);
-    }
+  //   for (const string& syllable : syllabary) {
+  //      std::cout<<"syllable_id："<<syllable_id<<"  syllable:
+  //      "<<syllable<<std::endl;
+  // 	 std::cout<<"词典大小："<<vocabulary.size()<<std::endl;
+  //     auto it = vocabulary.find(syllable_id++);
+  //     if (it == vocabulary.end())
+  //       continue;
+  //     const auto& entries(it->second.entries);
+  //     for (const auto& e : entries) {
+  //      std::cout<<"syllable: "<<syllable<<"  insert to:
+  //      "<<e->text.c_str()<<std::endl;
+  //       rev_table[e->text].insert(syllable);
+  //     }
+  //   }
+  for (const auto& e : collector.entries) {
+    std::cout << "添加词汇collector.entries: " << e->text
+              << "   及编码  e->raw_code: " << e->raw_code.ToString()
+              << std::endl;
+    rev_table[e->text].insert(e->raw_code.ToString());
   }
   StringTableBuilder key_trie_builder;
   StringTableBuilder value_trie_builder;
